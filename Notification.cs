@@ -1,5 +1,15 @@
 ﻿using UnityEngine;
 
+/*
+    consider renaming:
+
+    Notification -> MessageChannel, MessageRoute, MessageName, MessageType?
+    NotificationReceiver -> MessageReceiver, MessageSubscriber?
+
+    Instead of delegate Receiver, consider IMessageReceiver<T> interface added
+    to a List<IMessageReceiver<T>>
+ */
+
 public abstract class Notification : ScriptableObject
 {
     public abstract void Invoke(object message);

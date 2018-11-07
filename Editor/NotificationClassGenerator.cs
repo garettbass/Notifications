@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -54,14 +55,15 @@ public static class NotificationClassGenerator
             Path.GetDirectoryName(editorDirectory);
         var generatedDirectory =
             Path.Combine(notificationsDirectory, "Generated");
-        GenerateNotificationClasses<int>(generatedDirectory, "Integer");
-        GenerateNotificationClasses<float>(generatedDirectory, "Float");
-        GenerateNotificationClasses<string>(generatedDirectory);
         GenerateNotificationClasses<Color>(generatedDirectory);
-        GenerateNotificationClasses<Object>(generatedDirectory);
+        GenerateNotificationClasses<float>(generatedDirectory, "Float");
         GenerateNotificationClasses<GameObject>(generatedDirectory);
-        GenerateNotificationClasses<Transform>(generatedDirectory);
+        GenerateNotificationClasses<int>(generatedDirectory, "Integer");
+        GenerateNotificationClasses<Object>(generatedDirectory);
         GenerateNotificationClasses<RaycastHit>(generatedDirectory);
+        GenerateNotificationClasses<Sprite>(generatedDirectory);
+        GenerateNotificationClasses<string>(generatedDirectory);
+        GenerateNotificationClasses<Transform>(generatedDirectory);
         GenerateNotificationClasses<Vector2>(generatedDirectory);
         GenerateNotificationClasses<Vector3>(generatedDirectory);
         GenerateNotificationClasses<Vector4>(generatedDirectory);
@@ -90,6 +92,9 @@ public static class NotificationClassGenerator
         Type messageType,
         string messageName = null)
     {
+        var assetsRoot = "Assets/";
+        if (directory.StartsWith(assetsRoot))
+            directory = directory.Substring(assetsRoot.Length);
         var dataPath = Application.dataPath;
         if (directory.StartsWith(dataPath) == false)
             directory = Path.Combine(dataPath, directory);
@@ -99,6 +104,7 @@ public static class NotificationClassGenerator
         if (messageName == null)
             messageName = messageType.Name;
 
+        Debug.Log($"generate {directory}/{messageName}...");
         GenerateNotification(directory, messageType, messageName);
         GenerateNotificationEvent(directory, messageType, messageName);
         GenerateNotificationReceiver(directory, messageType, messageName);
@@ -126,7 +132,7 @@ public static class NotificationClassGenerator
             $"{{ }}";
 
         File.WriteAllText(filePath, source);
-        ImportOnNextEditorUpdate(filePath);
+        ImportFileOnNextEditorUpdate(filePath);
     }
 
     private static void GenerateNotificationEvent(
@@ -148,7 +154,7 @@ public static class NotificationClassGenerator
             $"{{ }}";
 
         File.WriteAllText(filePath, source);
-        ImportOnNextEditorUpdate(filePath);
+        ImportFileOnNextEditorUpdate(filePath);
     }
 
     private static void GenerateNotificationReceiver(
@@ -172,13 +178,30 @@ public static class NotificationClassGenerator
             $"{{ }}";
 
         File.WriteAllText(filePath, source);
-        ImportOnNextEditorUpdate(filePath);
+        ImportFileOnNextEditorUpdate(filePath);
     }
 
-    private static void ImportOnNextEditorUpdate(string filePath)
+    private static readonly HashSet<string>
+    s_filesToImport = new HashSet<string>();
+
+    private static void ImportFileOnNextEditorUpdate(string fileToImport)
     {
-        EditorApplication.delayCall += () =>
-            AssetDatabase.ImportAsset(filePath);
+        Debug.Log($"generated {fileToImport}");
+        s_filesToImport.Add(fileToImport);
+        EditorApplication.delayCall -= ImportFiles;
+        EditorApplication.delayCall += ImportFiles;
+    }
+
+    private static void ImportFiles()
+    {
+        var filesToImport = s_filesToImport.ToArray();
+        s_filesToImport.Clear();
+        if (filesToImport.Length > 0)
+        {
+            foreach (var fileToImport in filesToImport)
+                AssetDatabase.ImportAsset(fileToImport);
+            AssetDatabase.Refresh();
+        }
     }
 
 }

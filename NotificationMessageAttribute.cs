@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 
 [AttributeUsage(
     AttributeTargets.Class |
@@ -39,11 +40,7 @@ public class NotificationMessageAttribute : Attribute
             AppDomain
             .CurrentDomain
             .GetAssemblies()
-            .Where(assembly =>
-                assembly
-                .GetReferencedAssemblies()
-                .Any(referencedAssembly =>
-                    referencedAssembly.FullName == thisAssemblyFullName));
+            .Where(a => AssemblyDoesReferTo(a, thisAssemblyFullName));
 
         foreach (var assembly in candidateAssemblies)
         {
@@ -59,6 +56,18 @@ public class NotificationMessageAttribute : Attribute
                 }
             }
         }
+    }
+
+    //--------------------------------------------------------------------------
+
+    private static bool AssemblyDoesReferTo(
+        Assembly assembly,
+        string referencedAssemblyFullName)
+    {
+        return
+            assembly.FullName == referencedAssemblyFullName ||
+            assembly.GetReferencedAssemblies().Any(referencedAssembly =>
+                referencedAssembly.FullName == referencedAssemblyFullName);
     }
 
 }
